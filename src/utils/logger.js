@@ -21,6 +21,14 @@ class Logger {
     }
   }
 
+  static warn(message, data = null) {
+    const timestamp = new Date().toISOString();
+    console.warn(`[${timestamp}] ⚠️  ${message}`);
+    if (data) {
+      console.warn(`   데이터:`, data);
+    }
+  }
+
   static event(eventType, details = {}) {
     const timestamp = new Date().toISOString();
     const { user, channel, ...otherDetails } = details;
