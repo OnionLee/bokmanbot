@@ -1,5 +1,5 @@
 const ThermometerService = require('../services/thermometerService');
-const TemperatureMonitorService = require('../services/temperatureMonitorService');
+const CronMonitorService = require('../services/cronMonitorService');
 const Logger = require('../utils/logger');
 
 class ThermometerHandlers {
@@ -45,8 +45,8 @@ class ThermometerHandlers {
         channelName
       );
 
-      // 모니터링 자동 시작
-      await TemperatureMonitorService.onThermometerRegistered();
+                   // 모니터링 자동 시작
+             await CronMonitorService.onThermometerRegistered();
 
       await say({
         text: `✅ 온도계 등록 완료!\n\n🌡️ 온도계 ID: \`${thermometerId}\`\n📺 채널: #${channelName}\n\n🌡️ 온도계 모니터링이 자동으로 시작되었습니다. (10초 간격)`,
@@ -100,8 +100,8 @@ class ThermometerHandlers {
         command.channel_id
       );
 
-      // 모니터링 자동 중지 (등록된 온도계가 없으면)
-      await TemperatureMonitorService.onThermometerUnregistered();
+                   // 모니터링 자동 중지 (등록된 온도계가 없으면)
+             await CronMonitorService.onThermometerUnregistered();
 
       await say({
         text: `✅ 온도계 해지 완료!\n\n🌡️ 온도계 ID: \`${thermometerId}\`\n\n온도계 모니터링이 자동으로 조정되었습니다.`,

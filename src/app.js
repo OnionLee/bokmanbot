@@ -113,42 +113,11 @@ app.command(SLASH_COMMANDS.REGISTER_THERMOMETER, ThermometerHandlers.handleRegis
 app.command(SLASH_COMMANDS.UNREGISTER_THERMOMETER, ThermometerHandlers.handleUnregisterThermometer);
 app.command(SLASH_COMMANDS.LIST_THERMOMETERS, ThermometerHandlers.handleListThermometers);
 
-// 온도계 모니터링을 위한 Slack 클라이언트 설정
-let slackClient = null;
+       // Cron 모니터링 서비스 import
+       const CronMonitorService = require('./services/cronMonitorService');
 
-// 온도계 모니터링 서비스에 Slack 클라이언트 전달
-TemperatureMonitorService.setSlackClient = (client) => {
-  slackClient = client;
-};
-
-// 온도계 모니터링 서비스의 메시지 전송 함수 오버라이드
-TemperatureMonitorService.sendTemperatureAlert = async (thermometer, tempData, tempStatus) => {
-  try {
-    if (!slackClient) {
-      Logger.warn('Slack 클라이언트가 설정되지 않았습니다.');
-      return;
-    }
-
-    const alertMessage = TemperatureMonitorService.createTemperatureAlertMessage(
-      thermometer, 
-      tempData, 
-      tempStatus
-    );
-
-    await slackClient.chat.postMessage({
-      channel: thermometer.channelId,
-      ...alertMessage
-    });
-
-    Logger.success('온도 알림 전송 완료', {
-      thermometerId: thermometer.thermometerId,
-      channelId: thermometer.channelId
-    });
-
-  } catch (error) {
-    Logger.error('온도 알림 전송 중 오류', error);
-  }
-};
+       // 온도계 모니터링을 위한 Slack 클라이언트 설정
+       let slackClient = null;
 
 // 앱 시작
 (async () => {
@@ -161,11 +130,18 @@ TemperatureMonitorService.sendTemperatureAlert = async (thermometer, tempData, t
     
     await app.start(port);
     
-    // Slack 클라이언트 설정
-    TemperatureMonitorService.setSlackClient(app.client);
-    
-    Logger.success('BokmanBot이 성공적으로 실행되었습니다!');
-    Logger.info('온도계 등록 시 자동으로 모니터링이 시작됩니다.');
+               // Cron 모니터링 서비스에 Slack 클라이언트 설정
+           CronMonitorService.setSlackClient(app.client);
+
+           // 앱 시작 시 등록된 온도계가 있으면 모니터링 자동 시작
+           const activeThermometers = await ThermometerService.getAllActiveThermometers();
+           if (activeThermometers.length > 0) {
+             Logger.info('등록된 온도계 발견 - Cron 모니터링 자동 시작', { count: activeThermometers.length });
+             await CronMonitorService.onThermometerRegistered();
+           }
+
+           Logger.success('BokmanBot이 성공적으로 실행되었습니다!');
+           Logger.info('온도계 등록 시 자동으로 Cron 모니터링이 시작됩니다.');
     
   } catch (error) {
     Logger.error('서버 시작 중 오류 발생', error);
