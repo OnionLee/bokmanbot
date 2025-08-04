@@ -29,7 +29,7 @@ function validateEnvironmentVariables() {
       }
       
       if (isValid) {
-        validVars.push(`${key}: ✅ (${value.substring(0, 10)}...)`);
+        validVars.push(`${key}: ✅ 설정됨`);
       } else {
         missingVars.push(`${key}: ❌ (잘못된 형식)`);
       }
@@ -73,7 +73,7 @@ const app = new App({
 
 // 봇이 채널에 초대되었을 때
 app.event('app_mention', async ({ event, say }) => {
-  console.log('🔔 app_mention 이벤트 수신:', event);
+  console.log('🔔 app_mention 이벤트 수신 - 사용자:', event.user, '채널:', event.channel);
   try {
     await say({
       text: `안녕하세요! <@${event.user}>님, 저는 BokmanBot입니다! 👋`,
@@ -101,7 +101,7 @@ app.event('app_mention', async ({ event, say }) => {
 
 // 메시지 이벤트 처리
 app.message('안녕', async ({ message, say }) => {
-  console.log('💬 "안녕" 메시지 수신:', message);
+  console.log('💬 "안녕" 메시지 수신 - 사용자:', message.user, '채널:', message.channel);
   try {
     await say({
       text: `안녕하세요! <@${message.user}>님! 😊`,
@@ -165,7 +165,7 @@ app.message('시간', async ({ message, say }) => {
 
 // 슬래시 명령어 예시
 app.command('/hello', async ({ command, ack, say }) => {
-  console.log('⚡ /hello 슬래시 명령어 수신:', command);
+  console.log('⚡ /hello 슬래시 명령어 수신 - 사용자:', command.user_id, '채널:', command.channel_id);
   try {
     await ack();
     await say({
