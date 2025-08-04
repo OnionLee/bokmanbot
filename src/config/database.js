@@ -11,8 +11,8 @@ class Database {
       }
 
       await mongoose.connect(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
       });
 
       Logger.success('MongoDB 연결 성공');
