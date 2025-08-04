@@ -25,13 +25,33 @@ class TuyaService {
         return null;
       }
 
-      const status = {};
-      for (const item of response.result.status) {
-        status[item.code] = item.value;
+      // 응답 구조 확인 및 로깅
+      Logger.info('Tuya API 응답 구조', { 
+        deviceId, 
+        hasResult: !!response.result,
+        resultType: typeof response.result,
+        resultKeys: response.result ? Object.keys(response.result) : []
+      });
+
+      // response.result가 직접 상태 객체인 경우
+      if (response.result && typeof response.result === 'object' && !Array.isArray(response.result)) {
+        Logger.info('Tuya 기기 상태 조회 성공 (직접 객체)', { deviceId, result: response.result });
+        return response.result;
       }
 
-      Logger.info('Tuya 기기 상태 조회 성공', { deviceId, status });
-      return status;
+      // response.result.status가 배열인 경우
+      if (response.result && response.result.status && Array.isArray(response.result.status)) {
+        const status = {};
+        for (const item of response.result.status) {
+          status[item.code] = item.value;
+        }
+        Logger.info('Tuya 기기 상태 조회 성공 (배열 변환)', { deviceId, status });
+        return status;
+      }
+
+      // 기타 경우 - 원본 반환
+      Logger.info('Tuya 기기 상태 조회 성공 (원본 반환)', { deviceId, result: response.result });
+      return response.result;
     } catch (error) {
       Logger.error('Tuya 기기 상태 조회 실패', { deviceId, error: error.message });
       return null;
@@ -42,28 +62,67 @@ class TuyaService {
   extractTemperature(status) {
     if (!status) return null;
 
+    Logger.info('온도 데이터 추출 시작', { 
+      statusType: typeof status, 
+      isArray: Array.isArray(status),
+      statusKeys: Array.isArray(status) ? status.length : Object.keys(status)
+    });
+
     let temperature = null;
     let tempUnit = 'c';
 
-    // 온도 관련 상태 찾기
-    if (status.va_temperature !== undefined) {
-      temperature = status.va_temperature;
-    } else if (status.current_temperature !== undefined) {
-      temperature = status.current_temperature;
+    // 배열 형태인 경우 객체로 변환
+    let statusObj = status;
+    if (Array.isArray(status)) {
+      statusObj = {};
+      status.forEach(item => {
+        if (item && item.code && item.value !== undefined) {
+          statusObj[item.code] = item.value;
+        }
+      });
+      Logger.info('배열을 객체로 변환', statusObj);
     }
 
-    if (status.temp_unit_convert !== undefined) {
-      tempUnit = status.temp_unit_convert;
+    // 다양한 온도 속성명 시도
+    const tempKeys = [
+      'va_temperature',
+      'current_temperature', 
+      'temperature',
+      'temp',
+      'current_temp',
+      'va_temp'
+    ];
+
+    for (const key of tempKeys) {
+      if (statusObj[key] !== undefined && statusObj[key] !== null) {
+        temperature = statusObj[key];
+        Logger.info('온도 속성 발견', { key, value: temperature });
+        break;
+      }
+    }
+
+    // 온도 단위 확인
+    if (statusObj.temp_unit_convert !== undefined) {
+      tempUnit = statusObj.temp_unit_convert;
+    } else if (statusObj.temp_unit !== undefined) {
+      tempUnit = statusObj.temp_unit;
     }
 
     // 섭씨로 변환 (API에서 10배 값으로 오는 경우)
-    const tempCelsius = temperature !== null ? temperature / 10 : null;
+    let tempCelsius = null;
+    if (temperature !== null) {
+      // 값이 100 이상이면 10으로 나누기 (API 특성)
+      tempCelsius = temperature >= 100 ? temperature / 10 : temperature;
+    }
 
-    return {
+    const result = {
       temperature,
       tempUnit,
       tempCelsius
     };
+
+    Logger.info('온도 데이터 추출 완료', result);
+    return result;
   }
 
   // 온도 상태 판단

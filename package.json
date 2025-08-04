@@ -8,14 +8,18 @@
     "dev": "nodemon src/app.js",
     "heroku-postbuild": "echo 'Build completed'"
   },
-  "keywords": ["slack", "bot", "bolt"],
+  "keywords": [
+    "slack",
+    "bot",
+    "bolt"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@slack/bolt": "^3.17.0",
+    "@tuya/tuya-connector-nodejs": "^2.1.2",
     "dotenv": "^16.3.1",
-    "mongoose": "^8.0.0",
-    "@tuya/tuya-connector-nodejs": "^1.0.0"
+    "mongoose": "^8.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
@@ -23,4 +27,4 @@
   "engines": {
     "node": "18.x"
   }
-} 
+}
