@@ -2,10 +2,15 @@ const Thermometer = require('../models/thermometer');
 const Logger = require('../utils/logger');
 
 class ThermometerService {
-  // 온도계 등록
-  static async registerThermometer(thermometerId, channelId, channelName) {
+  // 온도계 등록 (설정 포함)
+  static async registerThermometer(thermometerId, channelId, channelName, settings = {}) {
     try {
-      Logger.info('온도계 등록 시도', { thermometerId, channelId, channelName });
+      Logger.info('온도계 등록 시도', { 
+        thermometerId, 
+        channelId, 
+        channelName, 
+        settings 
+      });
 
       // 기존 등록 확인
       const existing = await Thermometer.findOne({ 
@@ -17,24 +22,41 @@ class ThermometerService {
         if (existing.isActive) {
           throw new Error('이미 활성화된 온도계입니다.');
         } else {
-          // 비활성화된 온도계를 다시 활성화
+          // 비활성화된 온도계를 다시 활성화 (설정 업데이트)
           existing.isActive = true;
+          if (settings.monitoringInterval) existing.monitoringInterval = Math.max(5, Math.min(3600, settings.monitoringInterval));
+          if (settings.minTemp) existing.minTemp = Math.max(-50, Math.min(100, settings.minTemp));
+          if (settings.maxTemp) existing.maxTemp = Math.max(-50, Math.min(100, settings.maxTemp));
+          if (settings.warningTemp) existing.warningTemp = Math.max(1, Math.min(20, settings.warningTemp));
           await existing.save();
-          Logger.success('비활성화된 온도계를 다시 활성화했습니다.');
+          Logger.success('비활성화된 온도계를 다시 활성화했습니다.', { settings });
           return existing;
         }
       }
+
+      // 설정값 검증 및 기본값 적용
+      const validatedSettings = {
+        monitoringInterval: Math.max(5, Math.min(3600, settings.monitoringInterval || 10)),
+        minTemp: Math.max(-50, Math.min(100, settings.minTemp || 10)),
+        maxTemp: Math.max(-50, Math.min(100, settings.maxTemp || 30)),
+        warningTemp: Math.max(1, Math.min(20, settings.warningTemp || 5))
+      };
 
       // 새 온도계 등록
       const thermometer = new Thermometer({
         thermometerId,
         channelId,
         channelName,
-        isActive: true
+        isActive: true,
+        ...validatedSettings
       });
 
       await thermometer.save();
-      Logger.success('온도계 등록 성공', { thermometerId, channelId });
+      Logger.success('온도계 등록 성공', { 
+        thermometerId, 
+        channelId, 
+        settings: validatedSettings 
+      });
       return thermometer;
 
     } catch (error) {

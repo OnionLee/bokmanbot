@@ -125,20 +125,21 @@ class TuyaService {
     return result;
   }
 
-  // 온도 상태 판단
-  getTemperatureStatus(tempCelsius) {
+  // 온도 상태 판단 (개별 온도계 설정 사용)
+  getTemperatureStatus(tempCelsius, thermometerSettings = null) {
     if (tempCelsius === null || tempCelsius === undefined) {
       return { status: 'unknown', emoji: '❓', message: '온도 데이터 없음' };
     }
 
-    const maxTemp = 30; // 최고 온도 임계값
-    const minTemp = 10; // 최저 온도 임계값
-    const warningThreshold = 5; // 경고 임계값
+    // 기본값 또는 온도계별 설정 사용
+    const maxTemp = thermometerSettings?.maxTemp || 30;
+    const minTemp = thermometerSettings?.minTemp || 10;
+    const warningThreshold = thermometerSettings?.warningTemp || 5;
 
     if (tempCelsius > maxTemp) {
-      return { status: 'danger', emoji: '🔴', message: '최고온도 초과' };
+      return { status: 'danger', emoji: '🔴', message: `최고온도 초과 (${maxTemp}°C)` };
     } else if (tempCelsius < minTemp) {
-      return { status: 'danger', emoji: '🔴', message: '최저온도 미만' };
+      return { status: 'danger', emoji: '🔴', message: `최저온도 미만 (${minTemp}°C)` };
     } else if (tempCelsius >= (maxTemp - warningThreshold) || tempCelsius <= (minTemp + warningThreshold)) {
       return { status: 'warning', emoji: '🟡', message: '온도 임계값 근접' };
     } else {

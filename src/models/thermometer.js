@@ -21,6 +21,31 @@ const thermometerSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // 모니터링 설정
+  monitoringInterval: {
+    type: Number,
+    default: 10, // 기본값: 10초
+    min: 5,      // 최소: 5초
+    max: 3600    // 최대: 1시간
+  },
+  minTemp: {
+    type: Number,
+    default: 10, // 기본값: 10°C
+    min: -50,
+    max: 100
+  },
+  maxTemp: {
+    type: Number,
+    default: 30, // 기본값: 30°C
+    min: -50,
+    max: 100
+  },
+  warningTemp: {
+    type: Number,
+    default: 5,  // 기본값: 5°C (임계값 근접 경고)
+    min: 1,
+    max: 20
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -2,6 +2,47 @@ const ThermometerService = require('../services/thermometerService');
 const CronMonitorService = require('../services/cronMonitorService');
 const Logger = require('../utils/logger');
 
+// 온도계 설정 파싱 함수
+function parseThermometerSettings(text) {
+  const parts = text.split(',').map(part => part.trim());
+  const settings = {};
+  
+  // 첫 번째 부분은 온도계 ID
+  if (parts.length < 1) return settings;
+  
+  // 나머지 부분들을 설정으로 파싱
+  for (let i = 1; i < parts.length; i++) {
+    const part = parts[i];
+    if (part.includes('=')) {
+      const [key, value] = part.split('=').map(s => s.trim());
+      const numValue = parseFloat(value);
+      
+      if (!isNaN(numValue)) {
+        switch (key.toLowerCase()) {
+          case 'interval':
+          case '주기':
+            settings.monitoringInterval = numValue;
+            break;
+          case 'min':
+          case '최저':
+            settings.minTemp = numValue;
+            break;
+          case 'max':
+          case '최고':
+            settings.maxTemp = numValue;
+            break;
+          case 'warning':
+          case '주의':
+            settings.warningTemp = numValue;
+            break;
+        }
+      }
+    }
+  }
+  
+  return settings;
+}
+
 class ThermometerHandlers {
   // 온도계 등록 핸들러
   static async handleRegisterThermometer({ command, ack, say, client }) {
@@ -38,20 +79,33 @@ class ThermometerHandlers {
         channelName = `채널-${command.channel_id.slice(-6)}`;
       }
 
-      // 온도계 등록
-      await ThermometerService.registerThermometer(
-        thermometerId, 
-        command.channel_id, 
-        channelName
-      );
+               // 설정 파싱
+         const settings = parseThermometerSettings(command.text);
+         
+         // 온도계 등록
+         await ThermometerService.registerThermometer(
+           thermometerId,
+           command.channel_id,
+           channelName,
+           settings
+         );
 
                    // 모니터링 자동 시작
              await CronMonitorService.onThermometerRegistered();
 
-      await say({
-        text: `✅ 온도계 등록 완료!\n\n🌡️ 온도계 ID: \`${thermometerId}\`\n📺 채널: #${channelName}\n\n🌡️ 온도계 모니터링이 자동으로 시작되었습니다. (10초 간격)`,
-        response_type: 'in_channel'
-      });
+                   // 설정 정보 생성
+             const settingsInfo = [];
+             if (settings.monitoringInterval) settingsInfo.push(`⏰ 모니터링 주기: ${settings.monitoringInterval}초`);
+             if (settings.minTemp) settingsInfo.push(`❄️ 최저온도: ${settings.minTemp}°C`);
+             if (settings.maxTemp) settingsInfo.push(`🔥 최고온도: ${settings.maxTemp}°C`);
+             if (settings.warningTemp) settingsInfo.push(`⚠️ 주의온도: ${settings.warningTemp}°C`);
+             
+             const settingsText = settingsInfo.length > 0 ? `\n⚙️ 설정:\n${settingsInfo.join('\n')}` : '\n⚙️ 기본 설정 사용';
+             
+             await say({
+               text: `✅ 온도계 등록 완료!\n\n🌡️ 온도계 ID: \`${thermometerId}\`\n📺 채널: #${channelName}${settingsText}\n\n🌡️ 온도계 모니터링이 자동으로 시작되었습니다.`,
+               response_type: 'in_channel'
+             });
 
       Logger.success('온도계 등록 핸들러 완료');
 
@@ -149,14 +203,22 @@ class ThermometerHandlers {
         return;
       }
 
-      const thermometerList = thermometers.map((t, index) => 
-        `${index + 1}. 🌡️ \`${t.thermometerId}\` (등록일: ${t.createdAt.toLocaleDateString('ko-KR')})`
-      ).join('\n');
+                   const thermometerList = thermometers.map((t, index) => {
+               const settings = [];
+               if (t.monitoringInterval !== 10) settings.push(`⏰${t.monitoringInterval}초`);
+               if (t.minTemp !== 10) settings.push(`❄️${t.minTemp}°C`);
+               if (t.maxTemp !== 30) settings.push(`🔥${t.maxTemp}°C`);
+               if (t.warningTemp !== 5) settings.push(`⚠️${t.warningTemp}°C`);
+               
+               const settingsText = settings.length > 0 ? ` (${settings.join(', ')})` : '';
+               
+               return `${index + 1}. 🌡️ \`${t.thermometerId}\`${settingsText}\n   📅 등록일: ${t.createdAt.toLocaleDateString('ko-KR')}`;
+             }).join('\n\n');
 
-      await say({
-        text: `📋 이 채널의 온도계 목록:\n\n${thermometerList}\n\n총 ${thermometers.length}개의 온도계가 등록되어 있습니다.`,
-        response_type: 'ephemeral'
-      });
+             await say({
+               text: `📋 이 채널의 온도계 목록:\n\n${thermometerList}\n\n총 ${thermometers.length}개의 온도계가 등록되어 있습니다.\n\n💡 설정 변경: \`/reg-thermometer [온도계ID],주기=30,최저=5,최고=35,주의=3\``,
+               response_type: 'ephemeral'
+             });
 
       Logger.success('온도계 목록 조회 핸들러 완료');
 

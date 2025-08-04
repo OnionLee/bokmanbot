@@ -105,9 +105,13 @@ class CronMonitorService {
         return;
       }
 
-      // 온도 데이터 추출
-      const tempData = TuyaService.extractTemperature(deviceStatus);
-      const tempStatus = TuyaService.getTemperatureStatus(tempData.tempCelsius);
+             // 온도 데이터 추출
+       const tempData = TuyaService.extractTemperature(deviceStatus);
+       const tempStatus = TuyaService.getTemperatureStatus(tempData.tempCelsius, {
+         maxTemp: thermometer.maxTemp,
+         minTemp: thermometer.minTemp,
+         warningTemp: thermometer.warningTemp
+       });
 
       // 온도 정보 로깅
       Logger.info('온도계 데이터 수집 완료', {
