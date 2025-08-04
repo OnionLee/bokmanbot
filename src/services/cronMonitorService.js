@@ -23,12 +23,12 @@ class CronMonitorService {
       return;
     }
 
-    Logger.info('Cron 모니터링 시작 (10초마다 실행)');
+    Logger.info('Cron 모니터링 시작 (최소 1분 간격)');
     this.isMonitoring = true;
 
-    // 10초마다 실행되는 cron 작업
+    // 최소 10초 간격으로 실행되는 cron 작업
     this.cronJob = cron.schedule('*/10 * * * * *', async () => {
-      await this.checkAllThermometers();
+      await this.checkAllThermometersWithInterval();
     }, {
       scheduled: false
     });
@@ -64,8 +64,8 @@ class CronMonitorService {
     }
   }
 
-  // 모든 온도계 체크
-  async checkAllThermometers() {
+  // 모든 온도계 체크 (간격 고려)
+  async checkAllThermometersWithInterval() {
     try {
       Logger.info('Cron 온도계 모니터링 실행 시작');
 
@@ -79,9 +79,9 @@ class CronMonitorService {
 
       Logger.info(`총 ${thermometers.length}개의 온도계 모니터링 중`);
 
-      // 각 온도계별로 온도 체크
+      // 각 온도계별로 모니터링 주기 확인 후 체크
       for (const thermometer of thermometers) {
-        await this.checkThermometer(thermometer);
+        await this.checkThermometerWithInterval(thermometer);
       }
 
     } catch (error) {
@@ -89,12 +89,37 @@ class CronMonitorService {
     }
   }
 
-  // 개별 온도계 체크
-  async checkThermometer(thermometer) {
+  // 모든 온도계 체크 (기존 메서드 - 호환성 유지)
+  async checkAllThermometers() {
+    return this.checkAllThermometersWithInterval();
+  }
+
+  // 개별 온도계 체크 (간격 고려)
+  async checkThermometerWithInterval(thermometer) {
     try {
+      const now = Date.now();
+      const interval = (thermometer.monitoringInterval || 60) * 1000; // 초를 밀리초로 변환
+      
+      // 데이터베이스에서 마지막 체크 시간 확인
+      const lastCheckTime = thermometer.lastCheckTime ? thermometer.lastCheckTime.getTime() : 0;
+      const timeSinceLastCheck = now - lastCheckTime;
+      
+      // 설정된 간격보다 짧으면 스킵
+      if (timeSinceLastCheck < interval) {
+        Logger.info('온도계 체크 스킵 (간격 미달)', {
+          thermometerId: thermometer.thermometerId,
+          interval: `${thermometer.monitoringInterval / 60}분`,
+          timeSinceLastCheck: `${Math.round(timeSinceLastCheck / 1000)}초`,
+          lastCheckTime: thermometer.lastCheckTime ? thermometer.lastCheckTime.toISOString() : '없음'
+        });
+        return;
+      }
+      
       Logger.info('온도계 체크 시작', {
         thermometerId: thermometer.thermometerId,
-        channelId: thermometer.channelId
+        channelId: thermometer.channelId,
+        interval: `${thermometer.monitoringInterval / 60}분`,
+        timeSinceLastCheck: `${Math.round(timeSinceLastCheck / 1000)}초`
       });
 
       // Tuya API에서 기기 상태 조회
@@ -105,23 +130,27 @@ class CronMonitorService {
         return;
       }
 
-             // 온도 데이터 추출
-       const tempData = TuyaService.extractTemperature(deviceStatus);
-       const tempStatus = TuyaService.getTemperatureStatus(tempData.tempCelsius, {
-         maxTemp: thermometer.maxTemp,
-         minTemp: thermometer.minTemp,
-         warningTemp: thermometer.warningTemp
-       });
+      // 온도 데이터 추출
+      const tempData = TuyaService.extractTemperature(deviceStatus);
+      const tempStatus = TuyaService.getTemperatureStatus(tempData.tempCelsius, {
+        maxTemp: thermometer.maxTemp,
+        minTemp: thermometer.minTemp,
+        warningTemp: thermometer.warningTemp
+      });
 
       // 온도 정보 로깅
       Logger.info('온도계 데이터 수집 완료', {
         thermometerId: thermometer.thermometerId,
         temperature: tempData.tempCelsius,
-        status: tempStatus.status
+        status: tempStatus.status,
+        interval: `${thermometer.monitoringInterval / 60}분`
       });
 
       // 온도 상태에 따른 알림 전송
       await this.sendTemperatureAlert(thermometer, tempData, tempStatus);
+
+      // 마지막 체크 시간을 데이터베이스에 업데이트
+      await ThermometerService.updateLastCheckTime(thermometer.thermometerId, thermometer.channelId);
 
     } catch (error) {
       Logger.error('온도계 체크 중 오류', {
@@ -129,6 +158,11 @@ class CronMonitorService {
         error: error.message
       });
     }
+  }
+
+  // 개별 온도계 체크 (기존 메서드 - 호환성 유지)
+  async checkThermometer(thermometer) {
+    return this.checkThermometerWithInterval(thermometer);
   }
 
   // 온도 알림 전송
@@ -214,9 +248,9 @@ class CronMonitorService {
     return {
       isMonitoring: this.isMonitoring,
       cronExpression: '*/10 * * * * *',
-      description: '10초마다 실행'
+      description: '10초마다 실행 (최소 1분 간격으로 온도계 체크)'
     };
   }
 }
 
-module.exports = new CronMonitorService(); 
+module.exports = new CronMonitorService();

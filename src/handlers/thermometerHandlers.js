@@ -24,7 +24,8 @@ function parseThermometerSettings(text) {
         switch (key.toLowerCase()) {
           case 'interval':
           case '주기':
-            settings.monitoringInterval = numValue;
+            // 분 단위로 입력받아 초 단위로 변환
+            settings.monitoringInterval = numValue * 60;
             break;
           case 'min':
           case '최저':
@@ -46,7 +47,8 @@ function parseThermometerSettings(text) {
       if (!isNaN(numValue)) {
         switch (i) {
           case 1:
-            settings.monitoringInterval = numValue;
+            // 분 단위로 입력받아 초 단위로 변환
+            settings.monitoringInterval = numValue * 60;
             break;
           case 2:
             settings.minTemp = numValue;
@@ -75,7 +77,7 @@ class ThermometerHandlers {
 
          if (!inputText) {
            await say({
-             text: '❌ 온도계 ID를 입력해주세요.\n사용법: `/register-thermometer [온도계ID]`',
+             text: '❌ 온도계 ID를 입력해주세요.\n사용법: `/register-thermometer [온도계ID]`\n\n💡 설정 예시: `/register-thermometer [온도계ID],주기=1,최저=5,최고=35,주의=3` (주기는 분 단위)',
              response_type: 'ephemeral'
            });
            return;
@@ -118,7 +120,7 @@ class ThermometerHandlers {
 
                    // 설정 정보 생성
              const settingsInfo = [];
-             if (settings.monitoringInterval) settingsInfo.push(`⏰ 모니터링 주기: ${settings.monitoringInterval}초`);
+             if (settings.monitoringInterval) settingsInfo.push(`⏰ 모니터링 주기: ${settings.monitoringInterval / 60}분`);
              if (settings.minTemp) settingsInfo.push(`❄️ 최저온도: ${settings.minTemp}°C`);
              if (settings.maxTemp) settingsInfo.push(`🔥 최고온도: ${settings.maxTemp}°C`);
              if (settings.warningTemp) settingsInfo.push(`⚠️ 주의온도: ${settings.warningTemp}°C`);
@@ -228,7 +230,7 @@ class ThermometerHandlers {
 
                    const thermometerList = thermometers.map((t, index) => {
                const settings = [];
-               if (t.monitoringInterval !== 10) settings.push(`⏰${t.monitoringInterval}초`);
+               if (t.monitoringInterval !== 60) settings.push(`⏰${t.monitoringInterval / 60}분`);
                if (t.minTemp !== 10) settings.push(`❄️${t.minTemp}°C`);
                if (t.maxTemp !== 30) settings.push(`🔥${t.maxTemp}°C`);
                if (t.warningTemp !== 5) settings.push(`⚠️${t.warningTemp}°C`);
@@ -239,7 +241,7 @@ class ThermometerHandlers {
              }).join('\n\n');
 
              await say({
-               text: `📋 이 채널의 온도계 목록:\n\n${thermometerList}\n\n총 ${thermometers.length}개의 온도계가 등록되어 있습니다.\n\n💡 설정 변경: \`/reg-thermometer [온도계ID],주기=30,최저=5,최고=35,주의=3\``,
+               text: `📋 이 채널의 온도계 목록:\n\n${thermometerList}\n\n총 ${thermometers.length}개의 온도계가 등록되어 있습니다.\n\n💡 설정 변경: \`/reg-thermometer [온도계ID],주기=1,최저=5,최고=35,주의=3\` (주기는 분 단위)`,
                response_type: 'ephemeral'
              });
 

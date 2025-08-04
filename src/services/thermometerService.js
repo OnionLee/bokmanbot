@@ -24,7 +24,7 @@ class ThermometerService {
         } else {
           // 비활성화된 온도계를 다시 활성화 (설정 업데이트)
           existing.isActive = true;
-          if (settings.monitoringInterval) existing.monitoringInterval = Math.max(5, Math.min(3600, settings.monitoringInterval));
+          if (settings.monitoringInterval) existing.monitoringInterval = Math.max(60, settings.monitoringInterval);
           if (settings.minTemp) existing.minTemp = Math.max(-50, Math.min(100, settings.minTemp));
           if (settings.maxTemp) existing.maxTemp = Math.max(-50, Math.min(100, settings.maxTemp));
           if (settings.warningTemp) existing.warningTemp = Math.max(1, Math.min(20, settings.warningTemp));
@@ -36,7 +36,7 @@ class ThermometerService {
 
       // 설정값 검증 및 기본값 적용
       const validatedSettings = {
-        monitoringInterval: Math.max(5, Math.min(3600, settings.monitoringInterval || 10)),
+        monitoringInterval: Math.max(60, settings.monitoringInterval || 60),
         minTemp: Math.max(-50, Math.min(100, settings.minTemp || 10)),
         maxTemp: Math.max(-50, Math.min(100, settings.maxTemp || 30)),
         warningTemp: Math.max(1, Math.min(20, settings.warningTemp || 5))
@@ -159,6 +159,20 @@ class ThermometerService {
     } catch (error) {
       Logger.error('온도계 등록 여부 확인 실패', error);
       return false;
+    }
+  }
+
+  // 마지막 체크 시간 업데이트
+  static async updateLastCheckTime(thermometerId, channelId) {
+    try {
+      await Thermometer.updateOne(
+        { thermometerId, channelId, isActive: true },
+        { lastCheckTime: new Date() }
+      );
+      
+      Logger.info('마지막 체크 시간 업데이트', { thermometerId, channelId });
+    } catch (error) {
+      Logger.error('마지막 체크 시간 업데이트 실패', error);
     }
   }
 }
