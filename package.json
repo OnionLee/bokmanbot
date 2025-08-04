@@ -5,7 +5,8 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "heroku-postbuild": "echo 'Build completed'"
   },
   "keywords": ["slack", "bot", "bolt"],
   "author": "",
@@ -16,5 +17,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": "18.x"
   }
 } 

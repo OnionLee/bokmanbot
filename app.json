@@ -1,0 +1,32 @@
+{
+  "name": "bokmanbot",
+  "description": "Slack bot using Bolt Framework",
+  "repository": "https://github.com/yourusername/bokmanbot",
+  "logo": "https://node-js-sample.herokuapp.com/node.png",
+  "keywords": ["slack", "bot", "bolt", "node"],
+  "env": {
+    "SLACK_BOT_TOKEN": {
+      "description": "Slack Bot User OAuth Token",
+      "required": true
+    },
+    "SLACK_SIGNING_SECRET": {
+      "description": "Slack App Signing Secret",
+      "required": true
+    },
+    "SLACK_APP_TOKEN": {
+      "description": "Slack App-Level Token for Socket Mode",
+      "required": true
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+} 
