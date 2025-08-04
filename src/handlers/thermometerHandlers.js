@@ -77,7 +77,7 @@ class ThermometerHandlers {
 
          if (!inputText) {
            await say({
-             text: '❌ 온도계 ID를 입력해주세요.\n사용법: `/register-thermometer [온도계ID]`\n\n💡 설정 예시: `/register-thermometer [온도계ID],주기=1,최저=5,최고=35,주의=3` (주기는 분 단위)',
+             text: '❌ 온도계 ID를 입력해주세요.\n사용법: `/register-thermometer [온도계ID]`\n\n💡 설정 예시: `/register-thermometer [온도계ID], [주기(분)], [최저], [최고], [주의]`',
              response_type: 'ephemeral'
            });
            return;
@@ -183,7 +183,7 @@ class ThermometerHandlers {
              await CronMonitorService.onThermometerUnregistered();
 
       await say({
-        text: `✅ 온도계 해지 완료!\n\n🌡️ 온도계 ID: \`${thermometerId}\`\n\n온도계 모니터링이 자동으로 조정되었습니다.`,
+        text: `✅ 온도계 해지 완료!\n\n🌡️ 온도계 ID: \`${thermometerId}\``,
         response_type: 'in_channel'
       });
 
@@ -241,7 +241,7 @@ class ThermometerHandlers {
              }).join('\n\n');
 
              await say({
-               text: `📋 이 채널의 온도계 목록:\n\n${thermometerList}\n\n총 ${thermometers.length}개의 온도계가 등록되어 있습니다.\n\n💡 설정 변경: \`/reg-thermometer [온도계ID],주기=1,최저=5,최고=35,주의=3\` (주기는 분 단위)`,
+               text: `📋 이 채널의 온도계 목록:\n\n${thermometerList}\n\n총 ${thermometers.length}개의 온도계가 등록되어 있습니다.\n\n💡 설정 변경: \`/register-thermometer [온도계ID], [주기(분)], [최저], [최고], [주의]\``,
                response_type: 'ephemeral'
              });
 

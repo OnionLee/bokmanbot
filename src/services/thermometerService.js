@@ -84,6 +84,7 @@ class ThermometerService {
       }
 
       thermometer.isActive = false;
+      thermometer.lastCheckTime = null; // 마지막 체크 시간 초기화
       await thermometer.save();
 
       Logger.success('온도계 해지 성공', { thermometerId, channelId });
