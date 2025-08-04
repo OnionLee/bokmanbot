@@ -30,8 +30,11 @@ class ThermometerHandlers {
           channel: command.channel_id
         });
         channelName = channelInfo.channel.name;
+        Logger.info('채널 정보 조회 성공', { channelName });
       } catch (error) {
         Logger.error('채널 정보 조회 실패', error);
+        // 채널 ID를 사용하여 임시 이름 생성
+        channelName = `채널-${command.channel_id.slice(-6)}`;
       }
 
       // 온도계 등록
