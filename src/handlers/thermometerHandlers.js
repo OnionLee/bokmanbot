@@ -8,7 +8,10 @@ function parseThermometerSettings(text) {
   const settings = {};
   
   // 첫 번째 부분은 온도계 ID
-  if (parts.length < 1) return settings;
+  if (parts.length < 1) return { thermometerId: text, ...settings };
+  
+  // 온도계 ID 설정
+  settings.thermometerId = parts[0];
   
   // 나머지 부분들을 설정으로 파싱
   for (let i = 1; i < parts.length; i++) {
@@ -37,6 +40,25 @@ function parseThermometerSettings(text) {
             break;
         }
       }
+    } else {
+      // 키=값 형식이 아닌 경우, 순서대로 파싱
+      const numValue = parseFloat(part);
+      if (!isNaN(numValue)) {
+        switch (i) {
+          case 1:
+            settings.monitoringInterval = numValue;
+            break;
+          case 2:
+            settings.minTemp = numValue;
+            break;
+          case 3:
+            settings.maxTemp = numValue;
+            break;
+          case 4:
+            settings.warningTemp = numValue;
+            break;
+        }
+      }
     }
   }
   
@@ -49,15 +71,19 @@ class ThermometerHandlers {
     try {
       await ack();
       
-      const thermometerId = command.text.trim();
-      
-      if (!thermometerId) {
-        await say({
-          text: '❌ 온도계 ID를 입력해주세요.\n사용법: `/register-thermometer [온도계ID]`',
-          response_type: 'ephemeral'
-        });
-        return;
-      }
+               const inputText = command.text.trim();
+
+         if (!inputText) {
+           await say({
+             text: '❌ 온도계 ID를 입력해주세요.\n사용법: `/register-thermometer [온도계ID]`',
+             response_type: 'ephemeral'
+           });
+           return;
+         }
+
+         // 설정 파싱
+         const settings = parseThermometerSettings(inputText);
+         const thermometerId = settings.thermometerId || inputText;
 
       Logger.event('/register-thermometer 명령어 수신', { 
         user: command.user_id, 
@@ -79,10 +105,7 @@ class ThermometerHandlers {
         channelName = `채널-${command.channel_id.slice(-6)}`;
       }
 
-               // 설정 파싱
-         const settings = parseThermometerSettings(command.text);
-         
-         // 온도계 등록
+               // 온도계 등록
          await ThermometerService.registerThermometer(
            thermometerId,
            command.channel_id,
