@@ -12,7 +12,9 @@ function validateEnvironmentVariables() {
     'SLACK_BOT_TOKEN': process.env.SLACK_BOT_TOKEN,
     'SLACK_SIGNING_SECRET': process.env.SLACK_SIGNING_SECRET,
     'SLACK_APP_TOKEN': process.env.SLACK_APP_TOKEN,
-    'MONGODB_URI': process.env.MONGODB_URI
+    'MONGODB_URI': process.env.MONGODB_URI,
+    'TUYA_ACCESS_KEY': process.env.TUYA_ACCESS_KEY,
+    'TUYA_SECRET_KEY': process.env.TUYA_SECRET_KEY
   };
   
   const missingVars = [];
@@ -31,6 +33,10 @@ function validateEnvironmentVariables() {
       } else if (key === 'SLACK_SIGNING_SECRET' && value.length > 0) {
         isValid = true;
       } else if (key === 'MONGODB_URI' && value.startsWith('mongodb')) {
+        isValid = true;
+      } else if (key === 'TUYA_ACCESS_KEY' && value.length > 0) {
+        isValid = true;
+      } else if (key === 'TUYA_SECRET_KEY' && value.length > 0) {
         isValid = true;
       }
       
@@ -56,6 +62,8 @@ function validateEnvironmentVariables() {
     console.log('     SLACK_SIGNING_SECRET=your-signing-secret');
     console.log('     SLACK_APP_TOKEN=xapp-your-app-token');
     console.log('     MONGODB_URI=mongodb://your-mongodb-uri');
+    console.log('     TUYA_ACCESS_KEY=your-tuya-access-key');
+    console.log('     TUYA_SECRET_KEY=your-tuya-secret-key');
     console.log('  3. Slack API 웹사이트에서 올바른 토큰을 복사했는지 확인하세요');
     return false;
   }
@@ -86,6 +94,9 @@ const ThermometerHandlers = require('./handlers/thermometerHandlers');
 const { COMMANDS, SLASH_COMMANDS } = require('./config/constants');
 const Logger = require('./utils/logger');
 
+// 온도계 모니터링 서비스 import
+const TemperatureMonitorService = require('./services/temperatureMonitorService');
+
 // 이벤트 핸들러 등록
 app.event('app_mention', MentionHandlers.handleAppMention);
 
@@ -102,6 +113,43 @@ app.command(SLASH_COMMANDS.REGISTER_THERMOMETER, ThermometerHandlers.handleRegis
 app.command(SLASH_COMMANDS.UNREGISTER_THERMOMETER, ThermometerHandlers.handleUnregisterThermometer);
 app.command(SLASH_COMMANDS.LIST_THERMOMETERS, ThermometerHandlers.handleListThermometers);
 
+// 온도계 모니터링을 위한 Slack 클라이언트 설정
+let slackClient = null;
+
+// 온도계 모니터링 서비스에 Slack 클라이언트 전달
+TemperatureMonitorService.setSlackClient = (client) => {
+  slackClient = client;
+};
+
+// 온도계 모니터링 서비스의 메시지 전송 함수 오버라이드
+TemperatureMonitorService.sendTemperatureAlert = async (thermometer, tempData, tempStatus) => {
+  try {
+    if (!slackClient) {
+      Logger.warn('Slack 클라이언트가 설정되지 않았습니다.');
+      return;
+    }
+
+    const alertMessage = TemperatureMonitorService.createTemperatureAlertMessage(
+      thermometer, 
+      tempData, 
+      tempStatus
+    );
+
+    await slackClient.chat.postMessage({
+      channel: thermometer.channelId,
+      ...alertMessage
+    });
+
+    Logger.success('온도 알림 전송 완료', {
+      thermometerId: thermometer.thermometerId,
+      channelId: thermometer.channelId
+    });
+
+  } catch (error) {
+    Logger.error('온도 알림 전송 중 오류', error);
+  }
+};
+
 // 앱 시작
 (async () => {
   try {
@@ -113,7 +161,11 @@ app.command(SLASH_COMMANDS.LIST_THERMOMETERS, ThermometerHandlers.handleListTher
     
     await app.start(port);
     
+    // Slack 클라이언트 설정
+    TemperatureMonitorService.setSlackClient(app.client);
+    
     Logger.success('BokmanBot이 성공적으로 실행되었습니다!');
+    Logger.info('온도계 등록 시 자동으로 모니터링이 시작됩니다.');
     
   } catch (error) {
     Logger.error('서버 시작 중 오류 발생', error);
