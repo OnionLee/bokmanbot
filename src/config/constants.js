@@ -10,7 +10,10 @@ const COMMANDS = {
 
 // 슬래시 명령어
 const SLASH_COMMANDS = {
-  HELLO: '/hello'
+  HELLO: '/hello',
+  REGISTER_THERMOMETER: '/register-thermometer',
+  UNREGISTER_THERMOMETER: '/unregister-thermometer',
+  LIST_THERMOMETERS: '/list-thermometers'
 };
 
 // 메시지 템플릿

@@ -1,6 +1,9 @@
 const { App } = require('@slack/bolt');
 require('dotenv').config();
 
+// 데이터베이스 연결
+const Database = require('./config/database');
+
 // 환경 변수 검증 함수
 function validateEnvironmentVariables() {
   console.log('🔍 환경 변수 설정 확인 중...');
@@ -8,7 +11,8 @@ function validateEnvironmentVariables() {
   const requiredVars = {
     'SLACK_BOT_TOKEN': process.env.SLACK_BOT_TOKEN,
     'SLACK_SIGNING_SECRET': process.env.SLACK_SIGNING_SECRET,
-    'SLACK_APP_TOKEN': process.env.SLACK_APP_TOKEN
+    'SLACK_APP_TOKEN': process.env.SLACK_APP_TOKEN,
+    'MONGODB_URI': process.env.MONGODB_URI
   };
   
   const missingVars = [];
@@ -25,6 +29,8 @@ function validateEnvironmentVariables() {
       } else if (key === 'SLACK_APP_TOKEN' && value.startsWith('xapp-')) {
         isValid = true;
       } else if (key === 'SLACK_SIGNING_SECRET' && value.length > 0) {
+        isValid = true;
+      } else if (key === 'MONGODB_URI' && value.startsWith('mongodb')) {
         isValid = true;
       }
       
@@ -49,6 +55,7 @@ function validateEnvironmentVariables() {
     console.log('     SLACK_BOT_TOKEN=xoxb-your-bot-token');
     console.log('     SLACK_SIGNING_SECRET=your-signing-secret');
     console.log('     SLACK_APP_TOKEN=xapp-your-app-token');
+    console.log('     MONGODB_URI=mongodb://your-mongodb-uri');
     console.log('  3. Slack API 웹사이트에서 올바른 토큰을 복사했는지 확인하세요');
     return false;
   }
@@ -75,6 +82,7 @@ const app = new App({
 const MessageHandlers = require('./handlers/messageHandlers');
 const MentionHandlers = require('./handlers/mentionHandlers');
 const CommandHandlers = require('./handlers/commandHandlers');
+const ThermometerHandlers = require('./handlers/thermometerHandlers');
 const { COMMANDS, SLASH_COMMANDS } = require('./config/constants');
 const Logger = require('./utils/logger');
 
@@ -89,26 +97,26 @@ app.message(COMMANDS.TIME, MessageHandlers.handleTimeMessage);
 // 슬래시 명령어 핸들러 등록
 app.command(SLASH_COMMANDS.HELLO, CommandHandlers.handleHelloCommand);
 
+// 온도계 관련 슬래시 명령어 핸들러 등록
+app.command(SLASH_COMMANDS.REGISTER_THERMOMETER, ThermometerHandlers.handleRegisterThermometer);
+app.command(SLASH_COMMANDS.UNREGISTER_THERMOMETER, ThermometerHandlers.handleUnregisterThermometer);
+app.command(SLASH_COMMANDS.LIST_THERMOMETERS, ThermometerHandlers.handleListThermometers);
+
 // 앱 시작
 (async () => {
   try {
     const port = process.env.PORT || 3000;
     Logger.info('BokmanBot 서버 시작 중...', { port, socketMode: true });
     
+    // 데이터베이스 연결
+    await Database.connect();
+    
     await app.start(port);
     
     Logger.success('BokmanBot이 성공적으로 실행되었습니다!');
-    Logger.info('Slack 워크스페이스에서 봇을 테스트해보세요:');
-    Logger.info('• 봇을 채널에 초대하고 @BokmanBot으로 멘션');
-    Logger.info('• "안녕", "도움말", "시간" 메시지 전송');
-    Logger.info('• /hello 슬래시 명령어 사용');
     
   } catch (error) {
     Logger.error('서버 시작 중 오류 발생', error);
-    Logger.error('확인사항:');
-    Logger.error('1. Slack 앱 설정이 올바른지 확인');
-    Logger.error('2. 토큰이 유효한지 확인');
-    Logger.error('3. Socket Mode가 활성화되어 있는지 확인');
     process.exit(1);
   }
 })(); 
